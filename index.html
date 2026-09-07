@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>证件照排版工具 · ID Photo Layout Tool</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #eff6ff;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --success: #10b981;
+  --danger: #ef4444;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  min-height: 100vh;
+}
+
+/* Hero */
+.hero {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: white;
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -20%;
+  top: -50%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.02em; }
+.hero p { font-size: 14px; opacity: 0.92; }
+.hero .badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.card:last-child { margin-bottom: 0; }
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-title .num {
+  width: 26px;
+  height: 26px;
+  background: var(--primary);
+  color: white;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Upload */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg);
+}
+.drop-zone:hover, .drop-zone.is-dragover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(-1px);
+}
+.drop-zone-icon { font-size: 36px; margin-bottom: 8px; }
+.drop-zone-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.drop-zone-hint { font-size: 12px; color: var(--text-muted); }
+
+.photo-list {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.photo-list:empty { display: none; }
+.photo-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #f1f5f9;
+}
+.photo-thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-thumb .idx {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: rgba(15, 23, 42, 0.7);
+  color: white;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.photo-thumb .remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.photo-thumb:hover .remove { display: flex; }
+
+.photo-stat {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--primary-dark);
+}
+.photo-stat strong { font-weight: 700; }
+
+/* Size grids */
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.size-btn {
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+}
+.size-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+.size-btn.is-active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+.size-btn small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: normal;
+  margin-top: 2px;
+}
+.size-btn.is-active small {
+  color: var(--primary-dark);
+  opacity: 0.75;
+}
+
+/* Settings */
+.settings { display: flex; flex-direction: column; gap: 10px; }
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.setting-row > label {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.setting-row .control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+input[type="number"], select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  width: 70px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+}
+select { width: auto; max-width: 180px; }
+input[type="number"]:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+.unit { font-size: 12px; color: var(--text-muted); }
+
+/* Preview */
+.preview-card { min-height: 500px; }
+.preview-stage {
+  background: #f1f5f9;
+  background-image:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#previewCanvas {
+  max-width: 100%;
+  max-height: 540px;
+  background: white;
+  box-shadow: var(--shadow-lg);
+  border-radius: 2px;
+}
+.preview-info {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  text-align: center;
+}
+.preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.nav-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.nav-label { font-size: 13px; color: var(--text-muted); font-weight: 500; min-width: 100px; text-align: center; }
+
+/* Meta grid */
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+@media (max-width: 600px) { .meta-grid { grid-template-columns: repeat(2, 1fr); } }
+.meta-item {
+  background: var(--bg);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+.meta-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+.meta-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.meta-value small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 3px;
+}
+
+/* Export buttons */
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #0f172a;
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  max-width: 80vw;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.success { background: #059669; }
+.toast.error { background: var(--danger); }
+
+/* Tip box */
+.tip {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: #92400e;
+  margin-top: 12px;
+  line-height: 1.55;
+}
+.tip.info {
+  background: var(--primary-light);
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+.tip code {
+  background: rgba(0,0,0,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Loading overlay */
+.loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+.loading.show { display: flex; }
+.loading-box {
+  background: white;
+  padding: 24px 32px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-msg { font-size: 14px; color: var(--text); font-weight: 500; }
+
+/* Print styles */
+@media print {
+  body { background: white; }
+  .hero, .controls, .export-buttons, .meta-grid, .preview-nav, .preview-info, .tip, .toast { display: none !important; }
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  .card { border: none; box-shadow: none; padding: 0; }
+  .preview-card { padding: 0; }
+  .preview-stage {
+    background: white;
+    background-image: none;
+    padding: 0;
+    min-height: 0;
+  }
+  #previewCanvas { box-shadow: none; max-height: none; max-width: 100%; }
+  @page { margin: 10mm; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <h1>📷 证件照排版工具 <span class="badge">v1.0</span></h1>
+    <p>批量上传 · 一键排版 · 矢量级高清输出 — 支持 1寸 / 小1寸 / 2寸 / 小2寸，5寸 / 6寸 相纸</p>
+  </div>
+
+  <div class="layout">
+    <aside class="controls">
+      <!-- 1. Upload -->
+      <div class="card">
+        <div class="card-title"><span class="num">1</span> 上传证件照</div>
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-icon">📁</div>
+          <div class="drop-zone-text">拖拽照片到此处，或点击选择</div>
+          <div class="drop-zone-hint">支持 JPG / PNG / WebP · 可批量上传 · 也可直接粘贴（Ctrl+V）</div>
+          <input type="file" id="fileInput" multiple accept="image/*" hidden>
+        </div>
+        <div class="photo-list" id="photoList"></div>
+        <div class="photo-stat" id="photoStat" style="display:none"></div>
+      </div>
+
+      <!-- 2. Photo size -->
+      <div class="card">
+        <div class="card-title"><span class="num">2</span> 照片尺寸</div>
+        <div class="size-grid" id="photoSizeGrid">
+          <button class="size-btn is-active" data-size="1寸">1寸<small>25 × 35 mm（推荐）</small></button>
+          <button class="size-btn" data-size="小1寸">小1寸<small>22 × 32 mm</small></button>
+          <button class="size-btn" data-size="2寸">2寸<small>35 × 49 mm</small></button>
+          <button class="size-btn" data-size="小2寸">小2寸<small>35 × 45 mm</small></button>
+        </div>
+      </div>
+
+      <!-- 3. Page size -->
+      <div class="card">
+        <div class="card-title"><span class="num">3</span> 相纸尺寸</div>
+        <div class="size-grid" id="pageSizeGrid">
+          <button class="size-btn" data-page="5寸">5寸 (3R)<small>89 × 127 mm</small></button>
+          <button class="size-btn is-active" data-page="6寸">6寸 (4R)<small>102 × 152 mm（推荐）</small></button>
+        </div>
+      </div>
+
+      <!-- 4. Layout settings -->
+      <div class="card">
+        <div class="card-title"><span class="num">4</span> 排版设置</div>
+        <div class="settings">
+          <div class="setting-row">
+            <label>照片间距</label>
+            <div class="control">
+              <input type="number" id="spacing" value="1" min="0" max="20" step="0.5">
+              <span class="unit">mm</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>边缘边距</label>
+            <div class="control">
+              <input type="number" id="margin" value="0" min="0" max="20" step="0.5">
+              <span class="unit">mm</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label><input type="checkbox" id="showCropLines" checked> 显示裁切线</label>
+          </div>
+          <div class="setting-row">
+            <label>裁切线粗细</label>
+            <div class="control">
+              <input type="number" id="cropWidth" value="0.25" min="0.1" max="1" step="0.05">
+              <span class="unit">mm</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>裁切线颜色</label>
+            <div class="control">
+              <select id="cropColor">
+                <option value="#000000" selected>黑色</option>
+                <option value="#FFFFFF">白色</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="tip info">
+          ✂️ <strong>裁切线</strong>：最外圈照片从朝外边的<strong>两端（角点）</strong>各延伸一条细线到相纸边缘（顶行向上、底行向下、左列向左、右列向右）；照片之间不留线<br>
+          📸 <strong>自动铺满</strong>：上传 1 张照片自动复制到所有位置（适合"同款印多份"），多张时不够的位置用最后一张填满
+        </div>
+      </div>
+
+      <!-- 5. Export -->
+      <div class="card">
+        <div class="card-title"><span class="num">5</span> 导出设置</div>
+        <div class="settings">
+          <div class="setting-row">
+            <label>输出分辨率（DPI）</label>
+            <div class="control">
+              <select id="dpi">
+                <option value="200">200 DPI（草稿）</option>
+                <option value="300" selected>300 DPI（标准印刷）</option>
+                <option value="350">350 DPI（高清）</option>
+                <option value="600">600 DPI（超清）</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>输出格式</label>
+            <div class="control">
+              <select id="format">
+                <option value="png" selected>PNG（无损，推荐）</option>
+                <option value="jpg">JPG（较小）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="tip info">
+          ✅ <strong>清晰度保证：</strong>采用 <code>canvas.imageSmoothingQuality = 'high'</code>，源照片以原始分辨率直接绘入画布，仅按目标尺寸智能裁切，<strong>不重新编码、不损失清晰度</strong>
+        </div>
+      </div>
+    </aside>
+
+    <section class="output">
+      <!-- Preview -->
+      <div class="card preview-card">
+        <div class="card-title"><span class="num">📐</span> 排版预览</div>
+        <div class="preview-stage" id="previewStage">
+          <canvas id="previewCanvas" width="600" height="900"></canvas>
+        </div>
+        <div class="preview-info" id="previewInfo">请上传照片开始排版</div>
+        <div class="preview-nav" id="previewNav" style="display:none">
+          <button class="nav-btn" id="prevPageBtn" title="上一张（←）">‹</button>
+          <span class="nav-label" id="navLabel">第 1 / 1 张</span>
+          <button class="nav-btn" id="nextPageBtn" title="下一张（→）">›</button>
+        </div>
+
+        <div class="meta-grid" id="metaGrid">
+          <div class="meta-item">
+            <div class="meta-label">每张相纸</div>
+            <div class="meta-value" id="metaPerPage">9<small>张</small></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">生成张数</div>
+            <div class="meta-value" id="metaTotalPages">0<small>张</small></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">输出像素</div>
+            <div class="meta-value" id="metaOutput">0×0<small>px</small></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">已传照片</div>
+            <div class="meta-value" id="metaUsed">0 / 0<small>张</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export buttons -->
+      <div class="card">
+        <div class="card-title"><span class="num">💾</span> 导出图片</div>
+        <div class="export-buttons">
+          <button class="btn btn-primary" id="exportDesktopBtn">🖥️ 导出到桌面（推荐）</button>
+          <button class="btn btn-secondary" id="downloadBtn">⬇️ 浏览器下载</button>
+          <button class="btn btn-success" id="printBtn">🖨️ 打印</button>
+          <button class="btn btn-secondary" id="resetBtn">🔄 重置</button>
+        </div>
+        <div class="tip">
+          💡 <strong>导出到桌面</strong>：使用 Chrome / Edge 浏览器时，点击会弹出"另存为"对话框并自动定位到桌面文件夹；非 Chrome 浏览器会自动回退到浏览器下载。<br>
+          📄 <strong>多张相纸：</strong>上传超过 9 张（1寸）或 4 张（2寸）时，会自动生成多页，每页独立命名（如 <code>证件照_1寸_6寸_300dpi_001.png</code>）
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading"><div class="loading-box"><div class="spinner"></div><div class="loading-msg" id="loadingMsg">导出中…</div></div></div>
+
+<script>
+'use strict';
+
+// ============================================================
+// Constants
+// ============================================================
+const PHOTO_SIZES = {
+  '1寸':   { w: 25, h: 35 },
+  '小1寸': { w: 22, h: 32 },
+  '2寸':   { w: 35, h: 49 },
+  '小2寸': { w: 35, h: 45 }
+};
+
+const PAGE_SIZES = {
+  '5寸': { w: 89,  h: 127 },
+  '6寸': { w: 102, h: 152 }
+};
+
+// Default grid per photo size (matches user requirement: 9 for 1寸, 4 for 2寸)
+const DEFAULT_COUNTS = {
+  '1寸':   { cols: 3, rows: 3 },
+  '小1寸': { cols: 4, rows: 4 },
+  '2寸':   { cols: 2, rows: 2 },
+  '小2寸': { cols: 2, rows: 3 }
+};
+
+const MM_PER_INCH = 25.4;
+
+// ============================================================
+// State
+// ============================================================
+const state = {
+  photos: [],
+  photoSize: '1寸',
+  pageSize: '6寸',
+  spacing: 1,
+  margin: 0,
+  cropLineWidth: 0.25,
+  showCropLines: true,
+  cropColor: '#000000',
+  dpi: 300,
+  format: 'png',
+  jpgQuality: 1.0,
+  layout: null
+};
+
+let currentPageIdx = 0;
+
+// ============================================================
+// DOM
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const dropZone = $('dropZone');
+const fileInput = $('fileInput');
+const photoList = $('photoList');
+const photoStat = $('photoStat');
+const previewCanvas = $('previewCanvas');
+const previewInfo = $('previewInfo');
+const previewNav = $('previewNav');
+const navLabel = $('navLabel');
+const ctx = previewCanvas.getContext('2d');
+
+// ============================================================
+// Upload
+// ============================================================
+function setupDropZone() {
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('is-dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('is-dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('is-dragover');
+    if (e.dataTransfer && e.dataTransfer.files) {
+      handleFiles(e.dataTransfer.files);
+    }
+  });
+  fileInput.addEventListener('change', e => {
+    handleFiles(e.target.files);
+    fileInput.value = '';
+  });
+
+  // Paste images from clipboard
+  document.addEventListener('paste', async e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length > 0) {
+      await handleFiles(files);
+    }
+  });
+}
+
+async function handleFiles(files) {
+  const newPhotos = [];
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const img = await loadImage(file);
+      newPhotos.push({
+        id: Date.now() + '-' + Math.random().toString(36).slice(2, 9),
+        img,
+        name: file.name
+      });
+    } catch (err) {
+      console.error('Failed to load', file.name, err);
+      toast(`加载图片失败：${file.name}`, 'error');
+    }
+  }
+  if (newPhotos.length === 0) return;
+  state.photos.push(...newPhotos);
+  renderPhotoList();
+  calculateLayout();
+  if (state.layout) {
+    const totalPages = Math.ceil(state.photos.length / state.layout.count);
+    if (currentPageIdx >= totalPages) currentPageIdx = totalPages - 1;
+  }
+  renderPreview();
+  updateMeta();
+  toast(`已添加 ${newPhotos.length} 张照片`, 'success');
+}
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function renderPhotoList() {
+  photoList.innerHTML = '';
+  state.photos.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    const img = document.createElement('img');
+    img.src = p.img.src;
+    img.alt = p.name;
+    div.appendChild(img);
+
+    const idxBadge = document.createElement('span');
+    idxBadge.className = 'idx';
+    idxBadge.textContent = idx + 1;
+    div.appendChild(idxBadge);
+
+    const btn = document.createElement('button');
+    btn.className = 'remove';
+    btn.innerHTML = '×';
+    btn.title = '删除此张照片';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      state.photos.splice(idx, 1);
+      renderPhotoList();
+      calculateLayout();
+      if (state.layout) {
+        const totalPages = Math.ceil(state.photos.length / state.layout.count);
+        if (currentPageIdx >= totalPages) currentPageIdx = Math.max(0, totalPages - 1);
+      }
+      renderPreview();
+      updateMeta();
+    };
+    div.appendChild(btn);
+    photoList.appendChild(div);
+  });
+  updatePhotoStat();
+}
+
+function updatePhotoStat() {
+  if (state.layout && state.photos.length > 0) {
+    const totalPages = Math.ceil(state.photos.length / state.layout.count);
+    photoStat.style.display = 'block';
+    photoStat.innerHTML = `已上传 <strong>${state.photos.length}</strong> 张 · 将排版 <strong>${totalPages}</strong> 张相纸（共 ${state.layout.count * totalPages} 个位置）`;
+  } else {
+    photoStat.style.display = 'none';
+  }
+}
+
+// ============================================================
+// Layout Calculation
+// ============================================================
+function calculateLayout() {
+  if (state.photos.length === 0) {
+    state.layout = null;
+    return;
+  }
+
+  const photo = PHOTO_SIZES[state.photoSize];
+  const page = PAGE_SIZES[state.pageSize];
+  const defaults = DEFAULT_COUNTS[state.photoSize];
+  const spacing = state.spacing;
+  const margin = state.margin;
+
+  // Try default grid
+  let cols = defaults.cols;
+  let rows = defaults.rows;
+  let gridW = cols * photo.w + (cols - 1) * spacing;
+  let gridH = rows * photo.h + (rows - 1) * spacing;
+
+  // If it doesn't fit, reduce
+  if (gridW + margin * 2 > page.w || gridH + margin * 2 > page.h) {
+    const maxCols = Math.max(1, Math.floor((page.w - margin * 2 + spacing) / (photo.w + spacing)));
+    const maxRows = Math.max(1, Math.floor((page.h - margin * 2 + spacing) / (photo.h + spacing)));
+    cols = Math.min(cols, maxCols);
+    rows = Math.min(rows, maxRows);
+    gridW = cols * photo.w + (cols - 1) * spacing;
+    gridH = rows * photo.h + (rows - 1) * spacing;
+  }
+
+  const offsetX = (page.w - gridW) / 2;
+  const offsetY = (page.h - gridH) / 2;
+
+  state.layout = {
+    cols, rows,
+    count: cols * rows,
+    photoW: photo.w,
+    photoH: photo.h,
+    spacing,
+    margin,
+    pageW: page.w,
+    pageH: page.h,
+    gridW, gridH,
+    offsetX, offsetY
+  };
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+function renderPreview() {
+  if (!state.layout) {
+    showEmpty();
+    return;
+  }
+
+  const pageCount = Math.ceil(state.photos.length / state.layout.count);
+  if (currentPageIdx >= pageCount) currentPageIdx = Math.max(0, pageCount - 1);
+  if (currentPageIdx < 0) currentPageIdx = 0;
+
+  const layout = state.layout;
+  const previewMaxH = 540;
+  const previewMaxW = 800;
+  const scale = Math.min(previewMaxW / layout.pageW, previewMaxH / layout.pageH);
+  const cssW = Math.max(200, Math.round(layout.pageW * scale));
+  const cssH = Math.max(150, Math.round(layout.pageH * scale));
+
+  previewCanvas.style.width = cssW + 'px';
+  previewCanvas.style.height = cssH + 'px';
+  previewCanvas.width = cssW;
+  previewCanvas.height = cssH;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  renderPage(ctx, currentPageIdx, scale);
+
+  // Nav
+  if (pageCount > 1) {
+    previewNav.style.display = 'flex';
+    navLabel.textContent = `第 ${currentPageIdx + 1} / ${pageCount} 张`;
+    $('prevPageBtn').disabled = currentPageIdx === 0;
+    $('nextPageBtn').disabled = currentPageIdx === pageCount - 1;
+  } else {
+    previewNav.style.display = 'none';
+  }
+
+  const sameFillNote = state.photos.length === 1 ? '（同款铺满）' : '';
+  previewInfo.textContent = `相纸 ${state.pageSize}（${layout.pageW}×${layout.pageH}mm）· ${state.photoSize} 排版 ${layout.count} 张 ${sameFillNote}`;
+}
+
+function showEmpty() {
+  const w = 600, h = 400;
+  previewCanvas.style.width = w + 'px';
+  previewCanvas.style.height = h + 'px';
+  previewCanvas.width = w;
+  previewCanvas.height = h;
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '16px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('请上传照片开始排版', w / 2, h / 2);
+  previewInfo.textContent = '请上传照片开始排版';
+  previewNav.style.display = 'none';
+}
+
+function renderPage(ctx, pageIdx, scale) {
+  const layout = state.layout;
+  if (!layout) return;
+
+  // Background
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, layout.pageW * scale, layout.pageH * scale);
+
+  const startIdx = pageIdx * layout.count;
+  const photos = state.photos;
+  const total = photos.length;
+
+  // 自动铺满：1 张照片时整页都是它；多张时位置不够用最后一张填尾部
+  for (let i = 0; i < layout.count; i++) {
+    const col = i % layout.cols;
+    const row = Math.floor(i / layout.cols);
+    const x = layout.offsetX + col * (layout.photoW + layout.spacing);
+    const y = layout.offsetY + row * (layout.photoH + layout.spacing);
+
+    let photo = null;
+    if (total > 0) {
+      const idx = startIdx + i;
+      // 范围内正常取；超出时用最后一张（让单张也能铺满整页）
+      photo = idx < total ? photos[idx] : photos[total - 1];
+    }
+    if (photo) {
+      drawPhoto(ctx, photo.img, x, y, layout.photoW, layout.photoH, scale);
+    }
+  }
+
+  if (state.showCropLines) {
+    drawCropLines(ctx, scale);
+  }
+}
+
+function drawPhoto(ctx, img, x, y, w, h, scale) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  // Cover-fit: center crop to target aspect ratio
+  const targetAspect = w / h;
+  const imgAspect = img.width / img.height;
+
+  let sx, sy, sw, sh;
+  if (imgAspect > targetAspect) {
+    sh = img.height;
+    sw = sh * targetAspect;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    sw = img.width;
+    sh = sw / targetAspect;
+    sx = 0;
+    sy = (img.height - sh) / 2;
+  }
+
+  ctx.drawImage(img, sx, sy, sw, sh, x * scale, y * scale, w * scale, h * scale);
+  ctx.restore();
+}
+
+function drawCropLines(ctx, scale) {
+  const layout = state.layout;
+  const { cols, rows, photoW, photoH, spacing, offsetX, offsetY, pageW, pageH } = layout;
+
+  ctx.save();
+  ctx.strokeStyle = state.cropColor;
+  // 细线：默认 ~0.25mm 实际粗细（按打印尺寸计）
+  ctx.lineWidth = Math.max(0.6, scale * state.cropLineWidth);
+  ctx.lineCap = 'butt';
+
+  const edgeX = pageW * scale;   // 相纸右边缘 (px)
+  const edgeY = pageH * scale;   // 相纸下边缘 (px)
+
+  // 最外圈每张照片：从朝外的边的两端（角点）各延伸一条细线，直到相纸边缘
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = offsetX + c * (photoW + spacing);       // 照片左边缘 (mm)
+      const py = offsetY + r * (photoH + spacing);       // 照片上边缘 (mm)
+      const L = px * scale;                              // 左边缘 (px)
+      const R = (px + photoW) * scale;                   // 右边缘 (px)
+      const T = py * scale;                              // 上边缘 (px)
+      const B = (py + photoH) * scale;                   // 下边缘 (px)
+
+      // 最上行：照片顶边左端、右端各向上延伸，到相纸上边缘
+      if (r === 0) {
+        ctx.beginPath();
+        ctx.moveTo(L, T); ctx.lineTo(L, 0);
+        ctx.moveTo(R, T); ctx.lineTo(R, 0);
+        ctx.stroke();
+      }
+      // 最下行：照片底边左端、右端各向下延伸，到相纸下边缘
+      if (r === rows - 1) {
+        ctx.beginPath();
+        ctx.moveTo(L, B); ctx.lineTo(L, edgeY);
+        ctx.moveTo(R, B); ctx.lineTo(R, edgeY);
+        ctx.stroke();
+      }
+      // 最左列：照片左边上端、下端各向左延伸，到相纸左边缘
+      if (c === 0) {
+        ctx.beginPath();
+        ctx.moveTo(L, T); ctx.lineTo(0, T);
+        ctx.moveTo(L, B); ctx.lineTo(0, B);
+        ctx.stroke();
+      }
+      // 最右列：照片右边上端、下端各向右延伸，到相纸右边缘
+      if (c === cols - 1) {
+        ctx.beginPath();
+        ctx.moveTo(R, T); ctx.lineTo(edgeX, T);
+        ctx.moveTo(R, B); ctx.lineTo(edgeX, B);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+// Export Pipeline (preserves original resolution)
+// ============================================================
+async function generateAllPages() {
+  if (!state.layout || state.photos.length === 0) {
+    toast('请先上传照片', 'error');
+    return null;
+  }
+
+  const layout = state.layout;
+  const dpi = state.dpi;
+  const scalePerMm = dpi / MM_PER_INCH;
+
+  const pageWidthPx = Math.round(layout.pageW * scalePerMm);
+  const pageHeightPx = Math.round(layout.pageH * scalePerMm);
+  const totalPages = Math.ceil(state.photos.length / layout.count);
+
+  const baseName = `证件照_${state.photoSize}_${state.pageSize}_${dpi}dpi`;
+  const results = [];
+
+  for (let p = 0; p < totalPages; p++) {
+    showLoading(`正在生成第 ${p + 1} / ${totalPages} 张…`);
+    const canvas = document.createElement('canvas');
+    canvas.width = pageWidthPx;
+    canvas.height = pageHeightPx;
+    const exportCtx = canvas.getContext('2d');
+    exportCtx.imageSmoothingEnabled = true;
+    exportCtx.imageSmoothingQuality = 'high';
+
+    // yield to UI between pages so progress updates
+    await new Promise(r => setTimeout(r, 0));
+    renderPage(exportCtx, p, scalePerMm);
+
+    const blob = await canvasToBlob(canvas);
+    const filename = totalPages > 1
+      ? `${baseName}_${String(p + 1).padStart(3, '0')}.${state.format}`
+      : `${baseName}.${state.format}`;
+
+    results.push({ blob, filename });
+  }
+  hideLoading();
+  return results;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    const mime = state.format === 'jpg' ? 'image/jpeg' : 'image/png';
+    const quality = state.format === 'jpg' ? state.jpgQuality : undefined;
+    canvas.toBlob(b => {
+      if (b) resolve(b);
+      else reject(new Error('Canvas toBlob failed'));
+    }, mime, quality);
+  });
+}
+
+async function exportToDesktop() {
+  const results = await generateAllPages();
+  if (!results) return;
+
+  // Modern API: chrome / edge / opera
+  if (window.showSaveFilePicker && results.length === 1) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: results[0].filename,
+        startIn: 'desktop',
+        types: [{
+          description: 'Image',
+          accept: { [results[0].blob.type]: ['.' + state.format] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(results[0].blob);
+      await writable.close();
+      toast('已保存到桌面 ✓', 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('showSaveFilePicker 失败，回退到下载', err);
+    }
+  }
+
+  if (window.showDirectoryPicker && results.length > 1) {
+    try {
+      toast('请在弹窗中选择保存文件夹…');
+      const dirHandle = await window.showDirectoryPicker({ startIn: 'desktop' });
+      for (const { blob, filename } of results) {
+        const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      }
+      toast(`已保存 ${results.length} 张到所选文件夹 ✓`, 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('showDirectoryPicker 失败，回退到下载', err);
+    }
+  }
+
+  // Fallback: standard download
+  for (const { blob, filename } of results) {
+    downloadBlob(blob, filename);
+  }
+  toast(`已下载 ${results.length} 张，请在浏览器下载列表中查看`, 'success');
+}
+
+async function downloadAll() {
+  const results = await generateAllPages();
+  if (!results) return;
+  for (const { blob, filename } of results) {
+    downloadBlob(blob, filename);
+  }
+  toast(`已下载 ${results.length} 张`, 'success');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// ============================================================
+// Toast / Loading
+// ============================================================
+let toastTimer = null;
+function toast(msg, type = '') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2500);
+}
+function showLoading(msg) { $('loadingMsg').textContent = msg; $('loading').classList.add('show'); }
+function hideLoading() { $('loading').classList.remove('show'); }
+
+// ============================================================
+// Event bindings
+// ============================================================
+function bindEvents() {
+  document.querySelectorAll('#photoSizeGrid .size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#photoSizeGrid .size-btn').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      state.photoSize = btn.dataset.size;
+      currentPageIdx = 0;
+      calculateLayout();
+      renderPreview();
+      updateMeta();
+    });
+  });
+
+  document.querySelectorAll('#pageSizeGrid .size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#pageSizeGrid .size-btn').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      state.pageSize = btn.dataset.page;
+      currentPageIdx = 0;
+      calculateLayout();
+      renderPreview();
+      updateMeta();
+    });
+  });
+
+  $('spacing').addEventListener('input', e => {
+    state.spacing = Math.max(0, parseFloat(e.target.value) || 0);
+    calculateLayout(); renderPreview(); updateMeta();
+  });
+  $('margin').addEventListener('input', e => {
+    state.margin = Math.max(0, parseFloat(e.target.value) || 0);
+    calculateLayout(); renderPreview(); updateMeta();
+  });
+  $('cropWidth').addEventListener('input', e => {
+    state.cropLineWidth = Math.max(0.1, parseFloat(e.target.value) || 0.25);
+    renderPreview();
+  });
+  $('showCropLines').addEventListener('change', e => {
+    state.showCropLines = e.target.checked;
+    renderPreview();
+  });
+  $('cropColor').addEventListener('change', e => {
+    state.cropColor = e.target.value;
+    renderPreview();
+  });
+  $('dpi').addEventListener('change', e => {
+    state.dpi = parseInt(e.target.value);
+    updateMeta();
+  });
+  $('format').addEventListener('change', e => {
+    state.format = e.target.value;
+  });
+
+  $('prevPageBtn').addEventListener('click', () => {
+    if (currentPageIdx > 0) { currentPageIdx--; renderPreview(); }
+  });
+  $('nextPageBtn').addEventListener('click', () => {
+    if (!state.layout) return;
+    const total = Math.ceil(state.photos.length / state.layout.count);
+    if (currentPageIdx < total - 1) { currentPageIdx++; renderPreview(); }
+  });
+
+  $('exportDesktopBtn').addEventListener('click', exportToDesktop);
+  $('downloadBtn').addEventListener('click', downloadAll);
+  $('printBtn').addEventListener('click', () => window.print());
+  $('resetBtn').addEventListener('click', () => {
+    if (state.photos.length > 0 && !confirm('确定清空已上传的所有照片？')) return;
+    state.photos = [];
+    renderPhotoList();
+    calculateLayout();
+    renderPreview();
+    updateMeta();
+    toast('已清空');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowLeft') $('prevPageBtn').click();
+    else if (e.key === 'ArrowRight') $('nextPageBtn').click();
+  });
+}
+
+function updateMeta() {
+  if (!state.layout) {
+    $('metaPerPage').innerHTML = `0<small>张</small>`;
+    $('metaTotalPages').innerHTML = `0<small>张</small>`;
+    $('metaOutput').innerHTML = `0×0<small>px</small>`;
+    $('metaUsed').innerHTML = `0 / 0<small>张</small>`;
+    updatePhotoStat();
+    return;
+  }
+
+  const layout = state.layout;
+  const totalPages = Math.ceil(state.photos.length / layout.count);
+  const scale = state.dpi / MM_PER_INCH;
+  const outW = Math.round(layout.pageW * scale);
+  const outH = Math.round(layout.pageH * scale);
+
+  $('metaPerPage').innerHTML = `${layout.count}<small>${layout.cols}×${layout.rows}</small>`;
+  $('metaTotalPages').innerHTML = `${totalPages}<small>张相纸</small>`;
+  $('metaOutput').innerHTML = `${outW}×${outH}<small>px @ ${state.dpi}dpi</small>`;
+
+  if (state.photos.length > 0) {
+    const fillNote = state.photos.length === 1 ? ' · 同款铺满' : '';
+    $('metaUsed').innerHTML = `${state.photos.length}<small>张已上传${fillNote}</small>`;
+  } else {
+    $('metaUsed').innerHTML = `0 / ${layout.count}<small>张</small>`;
+  }
+
+  updatePhotoStat();
+}
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  setupDropZone();
+  bindEvents();
+  calculateLayout();
+  renderPreview();
+  updateMeta();
+}
+init();
+</script>
+</body>
+</html>
